@@ -83,7 +83,7 @@ class ClipboardSuggestionUi(override val ctx: Context, private val theme: Theme)
 
     override val root = HorizontalScrollView(ctx).apply {
         isHorizontalScrollBarEnabled = false
-        fillViewport = true
+        isFillViewport = true
         addView(suggestionRow, ViewGroup.LayoutParams(wrapContent, matchParent))
     }
 
@@ -104,8 +104,11 @@ class ClipboardSuggestionUi(override val ctx: Context, private val theme: Theme)
                 setOnClickListener { onPaste(url) }
             }
             extractedSuggestions.addView(
-                chip, LinearLayout.LayoutParams(wrapContent, matchParent).apply {
-                    setMargins(0, dp(4), dp(4), dp(4))
+                chip, LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                ).apply {
+                    setMargins(0, ctx.dp(4), ctx.dp(4), ctx.dp(4))
                 }
             )
         }
