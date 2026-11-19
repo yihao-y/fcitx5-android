@@ -13,37 +13,37 @@ jobs:
   build-debug:
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout sources with submodules
-        uses: actions/checkout@v4
+      - name: Fetch source code
+        uses: actions/checkout@v7
         with:
+          fetch-depth: 0
           submodules: recursive
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
+      - name: Setup Java
+        uses: actions/setup-java@v5
         with:
-          distribution: temurin
-          java-version: '17'
+          distribution: "temurin"
+          java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Android environment
+        uses: android-actions/setup-android@v4
 
-      - name: Install Android SDK, CMake and NDK
+      - name: Install CMake
+        run: sdkmanager --install "cmake;3.31.6"
+
+      - name: Install system dependencies
         run: |
-          sdkmanager --install 'platforms;android-36' 'build-tools;36.1.0' 'cmake;3.31.6' 'ndk;28.0.13004108'
+          sudo apt update
+          sudo apt install -y extra-cmake-modules gettext
 
-      - name: Install Linux build prerequisites
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y extra-cmake-modules gettext
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Unit tests and Debug APK
         run: ./gradlew :app:testDebugUnitTest :app:assembleDebug :plugin:rime:assembleDebug --stacktrace
 
       - name: Upload Debug APKs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fcitx5-clipboard-debug
           path: |
