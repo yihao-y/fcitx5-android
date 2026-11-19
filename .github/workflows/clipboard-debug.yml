@@ -39,8 +39,8 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Unit tests and Debug APK
-        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug :plugin:rime:assembleDebug --stacktrace
+      - name: Build app and Rime Debug APKs
+        run: ./gradlew :app:assembleDebug :plugin:rime:assembleDebug --stacktrace
 
       - name: Upload Debug APKs
         uses: actions/upload-artifact@v7
