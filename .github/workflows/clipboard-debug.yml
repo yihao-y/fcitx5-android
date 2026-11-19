@@ -1,0 +1,53 @@
+name: Clipboard Link Suggestions - Debug APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/clipboard-link-suggestions
+
+permissions:
+  contents: read
+
+jobs:
+  build-debug:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout sources with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK, CMake and NDK
+        run: |
+          sdkmanager --install 'platforms;android-36' 'build-tools;36.1.0' 'cmake;3.31.6' 'ndk;28.0.13004108'
+
+      - name: Install Linux build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y extra-cmake-modules gettext
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests and Debug APK
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug :plugin:rime:assembleDebug --stacktrace
+
+      - name: Upload Debug APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: fcitx5-clipboard-debug
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            plugin/rime/build/outputs/apk/debug/*.apk
+          retention-days: 7
+          if-no-files-found: error
