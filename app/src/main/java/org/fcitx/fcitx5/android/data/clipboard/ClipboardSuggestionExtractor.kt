@@ -56,20 +56,24 @@ object ClipboardSuggestionExtractor {
         }
 
         val original = text.trim()
-        val accepted = mutableListOf<Found>()
+        val claimed = mutableListOf<Found>()
+        val results = mutableListOf<ClipboardSuggestion>()
         val seen = HashSet<String>()
         for (match in matches.sortedWith(
             compareBy<Found> { it.start }
                 .thenByDescending { it.endExclusive }
                 .thenBy { it.suggestion.kind.ordinal }
         )) {
-            if (match.suggestion.text == original) continue
-            if (accepted.any { it.start < match.endExclusive && match.start < it.endExclusive }) continue
+            if (claimed.any { it.start < match.endExclusive && match.start < it.endExclusive }) continue
             if (!seen.add(match.suggestion.text)) continue
-            accepted.add(match)
-            if (accepted.size >= limit) break
+            // A full clipboard item still claims its span, so digits inside a copied URL
+            // or phone number never become a misleading extra suggestion.
+            claimed.add(match)
+            if (match.suggestion.text == original) continue
+            results.add(match.suggestion)
+            if (results.size >= limit) break
         }
-        return accepted.map { it.suggestion }
+        return results
     }
 
     private fun String.stripTrailingPunctuation(): String {
