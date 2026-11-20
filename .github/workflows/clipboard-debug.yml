@@ -1,4 +1,4 @@
-name: Clipboard Link Suggestions - Debug APK
+name: Personal Fcitx5 Android Debug APKs (ARM64)
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - feature/clipboard-link-suggestions
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-debug:
@@ -39,15 +39,34 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Build app and Rime Debug APKs
-        run: ./gradlew :app:assembleDebug :plugin:rime:assembleDebug --stacktrace
+      - name: Build app and Rime Debug APKs for ARM64 only
+        run: ./gradlew :app:assembleDebug :plugin:rime:assembleDebug -PbuildABI=arm64-v8a --stacktrace
 
-      - name: Upload Debug APKs
-        uses: actions/upload-artifact@v7
-        with:
-          name: fcitx5-clipboard-debug
-          path: |
-            app/build/outputs/apk/debug/*.apk
-            plugin/rime/build/outputs/apk/debug/*.apk
-          retention-days: 7
-          if-no-files-found: error
+      - name: Prepare exactly two APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          app_apks=(app/build/outputs/apk/debug/*.apk)
+          rime_apks=(plugin/rime/build/outputs/apk/debug/*.apk)
+          if (( ${#app_apks[@]} != 1 || ${#rime_apks[@]} != 1 )); then
+            echo "Expected exactly one APK each for app and Rime" >&2
+            printf 'App: %s\n' "${app_apks[@]}"
+            printf 'Rime: %s\n' "${rime_apks[@]}"
+            exit 1
+          fi
+          mkdir -p dist
+          cp "${app_apks[0]}" dist/fcitx5-android-debug-arm64-v8a.apk
+          cp "${rime_apks[0]}" dist/fcitx5-rime-debug-arm64-v8a.apk
+
+      - name: Publish two APKs as a prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "debug-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" \
+            dist/fcitx5-android-debug-arm64-v8a.apk \
+            dist/fcitx5-rime-debug-arm64-v8a.apk \
+            --target "${GITHUB_SHA}" \
+            --title "ARM64 Debug build #${GITHUB_RUN_NUMBER} (attempt ${GITHUB_RUN_ATTEMPT})" \
+            --notes "Debug APKs for ARM64 Android phones. Commit: ${GITHUB_SHA}. Both APKs are built and signed together. Not interchangeable with official Release APKs." \
+            --prerelease

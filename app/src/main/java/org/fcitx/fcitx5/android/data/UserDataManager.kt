@@ -97,7 +97,14 @@ object UserDataManager {
                 val metadataFile = extracted.find { it.name == "metadata.json" }
                     ?: errorRuntime(R.string.exception_user_data_metadata)
                 val metadata = json.decodeFromString<Metadata>(metadataFile.readText())
-                if (metadata.packageName != BuildConfig.APPLICATION_ID)
+                // The official app and our Debug app use separate Android package names.
+                // Allow migrating an official backup into the Debug app, but keep
+                // rejecting backups from unrelated packages.
+                val officialPackageName = "org.fcitx.fcitx5.android"
+                val importingOfficialIntoDebug =
+                    BuildConfig.APPLICATION_ID == "$officialPackageName.debug" &&
+                        metadata.packageName == officialPackageName
+                if (metadata.packageName != BuildConfig.APPLICATION_ID && !importingOfficialIntoDebug)
                     errorRuntime(R.string.exception_user_data_package_name_mismatch)
                 copyDir(File(tempDir, "shared_prefs"), sharedPrefsDir)
                 copyDir(File(tempDir, "databases"), dataBasesDir)

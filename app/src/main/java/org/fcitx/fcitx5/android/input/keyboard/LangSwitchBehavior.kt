@@ -11,5 +11,5 @@ enum class LangSwitchBehavior(override val stringRes: Int) : ManagedPreferenceEn
     Enumerate(R.string.space_behavior_enumerate),
     ToggleActivate(R.string.space_behavior_activate),
     NextInputMethodApp(R.string.lang_switch_behavior_next_ime_app),
-    RimeSchemaMenu(R.string.lang_switch_behavior_rime_schema_menu);
+    RimeNextSchema(R.string.lang_switch_behavior_rime_next_schema);
 }
