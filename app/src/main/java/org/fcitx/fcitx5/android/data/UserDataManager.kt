@@ -97,28 +97,9 @@ object UserDataManager {
                 val metadataFile = extracted.find { it.name == "metadata.json" }
                     ?: errorRuntime(R.string.exception_user_data_metadata)
                 val metadata = json.decodeFromString<Metadata>(metadataFile.readText())
-                // The official app and our Debug app use separate Android package names.
-                // Allow migrating an official backup into the Debug app, but keep
-                // rejecting backups from unrelated packages.
-                val officialPackageName = "org.fcitx.fcitx5.android"
-                val importingOfficialIntoDebug =
-                    BuildConfig.APPLICATION_ID == "$officialPackageName.debug" &&
-                        metadata.packageName == officialPackageName
-                if (metadata.packageName != BuildConfig.APPLICATION_ID && !importingOfficialIntoDebug)
+                if (metadata.packageName != BuildConfig.APPLICATION_ID)
                     errorRuntime(R.string.exception_user_data_package_name_mismatch)
-                val importedPrefsDir = File(tempDir, "shared_prefs")
-                if (importingOfficialIntoDebug) {
-                    // AndroidX PreferenceManager derives its default XML filename from
-                    // the application ID, which differs between Release and Debug.
-                    val officialPrefs = File(importedPrefsDir, "${metadata.packageName}_preferences.xml")
-                    val debugPrefs = File(importedPrefsDir, "${BuildConfig.APPLICATION_ID}_preferences.xml")
-                    check(officialPrefs.isFile) {
-                        "Official backup is missing its default preferences: ${officialPrefs.name}"
-                    }
-                    officialPrefs.copyTo(debugPrefs, overwrite = true)
-                    officialPrefs.delete()
-                }
-                copyDir(importedPrefsDir, sharedPrefsDir)
+                copyDir(File(tempDir, "shared_prefs"), sharedPrefsDir)
                 copyDir(File(tempDir, "databases"), dataBasesDir)
                 copyDir(File(tempDir, "external"), externalDir)
                 // keep importing recently_used for backwords compatibility

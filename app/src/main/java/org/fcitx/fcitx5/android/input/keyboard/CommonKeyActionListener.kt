@@ -9,10 +9,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import org.fcitx.fcitx5.android.core.FcitxAPI
-import org.fcitx.fcitx5.android.core.FcitxKeyMapping
-import org.fcitx.fcitx5.android.core.KeyState
-import org.fcitx.fcitx5.android.core.KeyStates
-import org.fcitx.fcitx5.android.core.KeySym
 import org.fcitx.fcitx5.android.daemon.launchOnReady
 import org.fcitx.fcitx5.android.data.prefs.AppPrefs
 import org.fcitx.fcitx5.android.input.broadcast.PreeditEmptyStateComponent
@@ -132,19 +128,6 @@ class CommonKeyActionListener :
                         }
                         LangSwitchBehavior.NextInputMethodApp -> {
                             service.switchToNextIME()
-                        }
-                        LangSwitchBehavior.RimeNextSchema -> {
-                            service.postFcitxJob {
-                                if (inputMethodEntryCached.uniqueName == "rime") {
-                                    // Rime's numbered_mode_switch: Ctrl+Shift+1 selects .next.
-                                    sendKey(
-                                        KeySym(FcitxKeyMapping.FcitxKey_1),
-                                        KeyStates(KeyState.Ctrl, KeyState.Shift, KeyState.Virtual)
-                                    )
-                                } else {
-                                    enumerateIme()
-                                }
-                            }
                         }
                     }
                 }
