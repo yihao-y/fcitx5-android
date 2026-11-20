@@ -1,0 +1,112 @@
+name: Personal ARM64 Release APKs
+
+# Only a deliberately created personal-v* tag builds and publishes APKs.
+# Ordinary branch pushes do not trigger any APK builds.
+on:
+  push:
+    tags:
+      - "personal-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  signed-release:
+    if: github.repository == 'yihao-y/fcitx5-android'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require persistent personal signing credentials
+        env:
+          SIGN_KEY_BASE64: ${{ secrets.PERSONAL_SIGN_KEY_BASE64 }}
+          SIGN_KEY_PWD: ${{ secrets.PERSONAL_SIGN_KEY_PWD }}
+          SIGN_KEY_ALIAS: ${{ secrets.PERSONAL_SIGN_KEY_ALIAS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in SIGN_KEY_BASE64 SIGN_KEY_PWD SIGN_KEY_ALIAS; do
+            if [[ -z "${!name}" ]]; then
+              echo "Missing signing secret: ${name}" >&2
+              exit 1
+            fi
+          done
+
+      - name: Fetch tagged source code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Android environment
+        uses: android-actions/setup-android@v4
+
+      - name: Install CMake and APK signing tools
+        run: sdkmanager --install "cmake;3.31.6" "build-tools;36.1.0"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y extra-cmake-modules gettext
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build signed ARM64 Release app and Rime plugin
+        env:
+          SIGN_KEY_BASE64: ${{ secrets.PERSONAL_SIGN_KEY_BASE64 }}
+          SIGN_KEY_PWD: ${{ secrets.PERSONAL_SIGN_KEY_PWD }}
+          SIGN_KEY_ALIAS: ${{ secrets.PERSONAL_SIGN_KEY_ALIAS }}
+        run: ./gradlew :app:assembleRelease :plugin:rime:assembleRelease -PbuildABI=arm64-v8a --stacktrace
+
+      - name: Verify signatures and prepare exactly two APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          app_apks=(app/build/outputs/apk/release/*.apk)
+          rime_apks=(plugin/rime/build/outputs/apk/release/*.apk)
+          if (( ${#app_apks[@]} != 1 || ${#rime_apks[@]} != 1 )); then
+            echo "Expected exactly one ARM64 Release APK each for app and Rime" >&2
+            printf 'App: %s\n' "${app_apks[@]}"
+            printf 'Rime: %s\n' "${rime_apks[@]}"
+            exit 1
+          fi
+
+          apksigner="$ANDROID_HOME/build-tools/36.1.0/apksigner"
+          app_cert="$("$apksigner" verify --print-certs "${app_apks[0]}" | awk '/Signer #1 certificate SHA-256 digest:/ {print $NF; exit}')"
+          rime_cert="$("$apksigner" verify --print-certs "${rime_apks[0]}" | awk '/Signer #1 certificate SHA-256 digest:/ {print $NF; exit}')"
+          if [[ -z "$app_cert" || "$app_cert" != "$rime_cert" ]]; then
+            echo "APK signing verification failed or app and Rime signatures differ" >&2
+            exit 1
+          fi
+          echo "Both APKs verified with signing certificate SHA-256: $app_cert"
+
+          mkdir -p dist
+          cp "${app_apks[0]}" dist/fcitx5-android-release-arm64-v8a.apk
+          cp "${rime_apks[0]}" dist/fcitx5-rime-release-arm64-v8a.apk
+
+      - name: Upload signed APKs directly to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" \
+              dist/fcitx5-android-release-arm64-v8a.apk \
+              dist/fcitx5-rime-release-arm64-v8a.apk \
+              --clobber
+          else
+            gh release create "$tag" \
+              dist/fcitx5-android-release-arm64-v8a.apk \
+              dist/fcitx5-rime-release-arm64-v8a.apk \
+              --target "$GITHUB_SHA" \
+              --title "Personal Fcitx5 Android $tag (ARM64)" \
+              --notes "Personal ARM64 build from commit $GITHUB_SHA. Both APKs use the same persistent signing key. First install requires uninstalling the differently signed official packages after backing up data."
+          fi
