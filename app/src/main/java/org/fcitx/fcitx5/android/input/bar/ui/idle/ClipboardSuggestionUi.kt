@@ -12,6 +12,8 @@ import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
 import org.fcitx.fcitx5.android.R
+import org.fcitx.fcitx5.android.data.clipboard.ClipboardSuggestion
+import org.fcitx.fcitx5.android.data.clipboard.ClipboardSuggestionKind
 import org.fcitx.fcitx5.android.data.theme.Theme
 import org.fcitx.fcitx5.android.input.keyboard.CustomGestureView
 import org.fcitx.fcitx5.android.utils.rippleDrawable
@@ -88,12 +90,24 @@ class ClipboardSuggestionUi(override val ctx: Context, private val theme: Theme)
     }
 
     /** Extra paste targets are transient: they are never written to clipboard history. */
-    fun setExtractedUrls(urls: List<String>, onPaste: (String) -> Unit) {
+    fun setExtractedSuggestions(suggestions: List<ClipboardSuggestion>, onPaste: (String) -> Unit) {
         extractedSuggestions.removeAllViews()
-        for (url in urls) {
+        for (suggestion in suggestions) {
+            val iconRes = when (suggestion.kind) {
+                ClipboardSuggestionKind.Link -> R.drawable.ic_clipboard_link
+                ClipboardSuggestionKind.Email -> R.drawable.ic_clipboard_email
+                ClipboardSuggestionKind.Phone -> R.drawable.ic_clipboard_phone
+                ClipboardSuggestionKind.Number -> R.drawable.ic_clipboard_number
+            }
             val chip = TextView(ctx).apply {
-                text = url
-                contentDescription = url
+                text = suggestion.text
+                contentDescription = suggestion.text
+                val iconDrawable = ctx.getDrawable(iconRes)?.mutate()?.apply {
+                    setTint(theme.altKeyTextColor)
+                    setBounds(0, 0, ctx.dp(20), ctx.dp(20))
+                }
+                setCompoundDrawablesRelative(iconDrawable, null, null, null)
+                compoundDrawablePadding = ctx.dp(4)
                 isSingleLine = true
                 maxWidth = dp(160)
                 ellipsize = TextUtils.TruncateAt.END
@@ -101,7 +115,7 @@ class ClipboardSuggestionUi(override val ctx: Context, private val theme: Theme)
                 setTextColor(theme.altKeyTextColor)
                 setPadding(dp(8), 0, dp(8), 0)
                 background = rippleDrawable(theme.keyPressHighlightColor)
-                setOnClickListener { onPaste(url) }
+                setOnClickListener { onPaste(suggestion.text) }
             }
             extractedSuggestions.addView(
                 chip, LinearLayout.LayoutParams(

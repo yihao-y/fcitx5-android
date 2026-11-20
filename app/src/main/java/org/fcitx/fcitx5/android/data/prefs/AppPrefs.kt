@@ -341,7 +341,7 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
         val clipboardSuggestion = switch(
             R.string.clipboard_suggestion, "clipboard_suggestion", true
         ) { clipboardListening.getValue() }
-        val clipboardExtractLinks = switch(
+        val clipboardExtractSuggestions = switch(
             R.string.clipboard_extract_links, "clipboard_extract_links", true
         ) { clipboardListening.getValue() && clipboardSuggestion.getValue() }
         val clipboardItemTimeout = int(

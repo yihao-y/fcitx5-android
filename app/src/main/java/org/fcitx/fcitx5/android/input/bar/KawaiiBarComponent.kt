@@ -30,7 +30,7 @@ import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.core.CapabilityFlag
 import org.fcitx.fcitx5.android.core.CapabilityFlags
 import org.fcitx.fcitx5.android.core.FcitxEvent.CandidateListEvent
-import org.fcitx.fcitx5.android.data.clipboard.ClipboardLinkExtractor
+import org.fcitx.fcitx5.android.data.clipboard.ClipboardSuggestionExtractor
 import org.fcitx.fcitx5.android.data.clipboard.ClipboardManager
 import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardEntry
 import org.fcitx.fcitx5.android.data.prefs.AppPrefs
@@ -99,7 +99,7 @@ class KawaiiBarComponent : UniqueViewComponent<KawaiiBarComponent, FrameLayout>(
     private val prefs = AppPrefs.getInstance()
 
     private val clipboardSuggestion = prefs.clipboard.clipboardSuggestion
-    private val clipboardExtractLinks = prefs.clipboard.clipboardExtractLinks
+    private val clipboardExtractSuggestions = prefs.clipboard.clipboardExtractSuggestions
     private val clipboardItemTimeout = prefs.clipboard.clipboardItemTimeout
     private val clipboardMaskSensitive by prefs.clipboard.clipboardMaskSensitive
     private val expandedCandidateStyle by prefs.keyboard.expandedCandidateStyle
@@ -133,9 +133,9 @@ class KawaiiBarComponent : UniqueViewComponent<KawaiiBarComponent, FrameLayout>(
                     } else {
                         it.text.take(42)
                     }
-                    idleUi.clipboardUi.setExtractedUrls(
-                        if (it.sensitive || !clipboardExtractLinks.getValue()) emptyList()
-                        else ClipboardLinkExtractor.extract(it.text)
+                    idleUi.clipboardUi.setExtractedSuggestions(
+                        if (it.sensitive || !clipboardExtractSuggestions.getValue()) emptyList()
+                        else ClipboardSuggestionExtractor.extract(it.text)
                     ) { url ->
                         service.commitText(url)
                         clipboardTimeoutJob?.cancel()
@@ -151,7 +151,7 @@ class KawaiiBarComponent : UniqueViewComponent<KawaiiBarComponent, FrameLayout>(
         }
 
     @Keep
-    private val onClipboardExtractLinksUpdateListener =
+    private val onClipboardExtractSuggestionsUpdateListener =
         ManagedPreference.OnChangeListener<Boolean> { _, _ ->
             if (isClipboardFresh) {
                 ClipboardManager.lastEntry?.let { onClipboardUpdateListener.onUpdate(it) }
@@ -448,7 +448,7 @@ class KawaiiBarComponent : UniqueViewComponent<KawaiiBarComponent, FrameLayout>(
         }
         ClipboardManager.addOnUpdateListener(onClipboardUpdateListener)
         clipboardSuggestion.registerOnChangeListener(onClipboardSuggestionUpdateListener)
-        clipboardExtractLinks.registerOnChangeListener(onClipboardExtractLinksUpdateListener)
+        clipboardExtractSuggestions.registerOnChangeListener(onClipboardExtractSuggestionsUpdateListener)
         clipboardItemTimeout.registerOnChangeListener(onClipboardTimeoutUpdateListener)
     }
 
