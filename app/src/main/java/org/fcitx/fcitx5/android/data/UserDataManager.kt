@@ -106,7 +106,19 @@ object UserDataManager {
                         metadata.packageName == officialPackageName
                 if (metadata.packageName != BuildConfig.APPLICATION_ID && !importingOfficialIntoDebug)
                     errorRuntime(R.string.exception_user_data_package_name_mismatch)
-                copyDir(File(tempDir, "shared_prefs"), sharedPrefsDir)
+                val importedPrefsDir = File(tempDir, "shared_prefs")
+                if (importingOfficialIntoDebug) {
+                    // AndroidX PreferenceManager derives its default XML filename from
+                    // the application ID, which differs between Release and Debug.
+                    val officialPrefs = File(importedPrefsDir, "${metadata.packageName}_preferences.xml")
+                    val debugPrefs = File(importedPrefsDir, "${BuildConfig.APPLICATION_ID}_preferences.xml")
+                    check(officialPrefs.isFile) {
+                        "Official backup is missing its default preferences: ${officialPrefs.name}"
+                    }
+                    officialPrefs.copyTo(debugPrefs, overwrite = true)
+                    officialPrefs.delete()
+                }
+                copyDir(importedPrefsDir, sharedPrefsDir)
                 copyDir(File(tempDir, "databases"), dataBasesDir)
                 copyDir(File(tempDir, "external"), externalDir)
                 // keep importing recently_used for backwords compatibility
