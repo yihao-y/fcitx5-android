@@ -1,9 +1,11 @@
 name: Personal ARM64 Release APKs
 
-# Only a deliberately created personal-v* tag builds and publishes APKs.
-# Ordinary branch pushes do not trigger any APK builds.
+# Build only for deliberate personal-v* tags or one-time personal-build-v* branches.
+# Ordinary feature-branch commits do not trigger APK builds.
 on:
   push:
+    branches:
+      - "personal-build-v*"
     tags:
       - "personal-v*"
 
@@ -96,7 +98,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tag="$GITHUB_REF_NAME"
+          if [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
+            # A one-time build branch personal-build-v1 publishes personal-v1.
+            tag="personal-${GITHUB_REF_NAME#personal-build-}"
+          else
+            tag="$GITHUB_REF_NAME"
+          fi
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" \
               dist/fcitx5-android-release-arm64-v8a.apk \
